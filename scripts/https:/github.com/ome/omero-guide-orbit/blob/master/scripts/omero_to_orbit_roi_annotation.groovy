@@ -44,7 +44,6 @@ String PASSWORD = "PASSWORD "
 //For each image in range:
 for (int j=351; j<=606; j++) {
 // Get the OMERO Image ID
-//int omeroImageId = rdf.getRawDataFileId()
 int omeroImageId = j
 println("ID:" + omeroImageId)
 
@@ -54,18 +53,14 @@ imageProvider.authenticateUser(USERNAME, PASSWORD)
 Gateway gateway = imageProvider.getGatewayAndCtx().getGateway()
 SecurityContext ctx = imageProvider.getGatewayAndCtx().getCtx()
 
-// Load all rois on the Orbit:
-List rois = imageProvider.LoadRawAnnotationsByRawDataFile(omeroImageId)
-println("Found " + rois.size() + " files")
+// Load all rois on Orbit:
+//List<RawAnnotation> annotations = imageProvider.LoadRawAnnotationsByRawDataFile(omeroImageId) //Load Annotations instead of ROIs
 
-List AnnToSave = new ArrayList()
-for (RawRois ann: rois) {
-// Cast to ImageAnnotation, scale to 100 and get Points
-ImageAnnotation ia = new ImageAnnotation(ann)
-Polygon poly = ((IScaleableShape) ia.getFirstShape()).getScaledInstance(100d, new Point(0, 0))
-String points = poly.listPoints()
-println(points)
+List<ROIResult> annotations = gateway.getFacility(ROIFacility).loadROIs(ctx, omeroImageId) // No error but nothing in the list
+int Count = gateway.getFacility(ROIFacility).getROICount(ctx, omeroImageId) // No error but count = 0
 
+//HERE need to split datas to polygons parameters
+  
 //Create Polygon in OrbitImageAnalysis
 //PolygonExt polygon = new PolygonExt();
 polygon = new PolygonI()
