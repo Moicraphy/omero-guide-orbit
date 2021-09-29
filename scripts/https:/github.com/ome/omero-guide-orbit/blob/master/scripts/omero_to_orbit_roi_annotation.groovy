@@ -1,6 +1,7 @@
 import com.actelion.research.orbit.imageAnalysis.models.ImageAnnotation
 import com.actelion.research.orbit.imageAnalysis.models.PolygonExt
 
+
 import java.awt.Color
 import java.awt.Point
 import java.awt.Polygon
@@ -15,25 +16,41 @@ import com.actelion.research.orbit.imageAnalysis.models.ImageAnnotation
 import com.actelion.research.orbit.imageAnalysis.models.IScaleableShape
 import com.actelion.research.orbit.imageprovider.ImageProviderOmero
 import com.actelion.research.orbit.imageprovider.OmeroConf
-
+import ome.model.roi.Roi
 import omero.gateway.Gateway
 import omero.gateway.SecurityContext
 import omero.model.ImageI
 import omero.model.RoiI
 import omero.model.PolygonI
-
 import omero.gateway.Gateway
 import omero.gateway.model.TagAnnotationData;
 import omero.model.TagAnnotation;
 import omero.gateway.facility.ROIFacility
+import omero.gateway.model.ROIData
 
 import static omero.rtypes.rstring
 import static omero.rtypes.rint
 import com.actelion.research.orbit.imageAnalysis.dal.DALConfig
 
+import java.io.*;
+import java.util.*;
+//import omero.gateway.util.ROIComponent
+
+//import omero.gateway.BlitzGateway
+
+//import omero.scripts as scripts
+//import omero.gateway.BlitzGateway
+//import omero.rtypes.rlong
+//, rint, rstring, robject, unwrap
+import omero.model.RectangleI
+//EllipseI, LineI, PolygonI, PolylineI, MaskI, LabelI, PointI
+//import math
+//, pi
+import omero.gateway.model.ROIResult
+
 // Edit these parameters
-String USERNAME = "USERNAME "
-String PASSWORD = "PASSWORD "
+String USERNAME = "root"
+String PASSWORD = "omero-root-password"
 
 // Use the currently opened image...
 //final OrbitImageAnalysis OIA = OrbitImageAnalysis.getInstance()
@@ -41,10 +58,18 @@ String PASSWORD = "PASSWORD "
 //println("selected image: " + iFrame)
 //RawDataFile rdf = iFrame.rdf
 
-//For each image in range:
-for (int j=351; j<=606; j++) {
+//Boucle
+
+
+
+//if(j<351 || j>390 && j!=604 && j!=605 && j!=606 || j==355 || j==360 || j==361) {
+//print("Skip :"+j);
+//continue;
+//}
+//else{
 // Get the OMERO Image ID
-int omeroImageId = j
+//int omeroImageId = rdf.getRawDataFileId()
+int omeroImageId = 352
 println("ID:" + omeroImageId)
 
 // Login to create a new connection with OMERO
@@ -53,40 +78,66 @@ imageProvider.authenticateUser(USERNAME, PASSWORD)
 Gateway gateway = imageProvider.getGatewayAndCtx().getGateway()
 SecurityContext ctx = imageProvider.getGatewayAndCtx().getCtx()
 
-// Load all rois on Orbit:
-//List<RawAnnotation> annotations = imageProvider.LoadRawAnnotationsByRawDataFile(omeroImageId) //Load Annotations instead of ROIs
+List<ROIResult> roiresults = gateway.getFacility(ROIFacility).loadROIs(ctx, omeroImageId)
+int Count = gateway.getFacility(ROIFacility).getROICount(ctx, omeroImageId)
+println("Found " +Count+ " Rois ")
 
-List<ROIResult> annotations = gateway.getFacility(ROIFacility).loadROIs(ctx, omeroImageId) // No error but nothing in the list
-int Count = gateway.getFacility(ROIFacility).getROICount(ctx, omeroImageId) // No error but count = 0
+ROIResult r = roiresults.iterator().next();
+if (r == null) return;
+Collection<ROIData> rois = r.getROIs();
 
-//HERE need to split datas to polygons parameters
+List<Shape> list;
+Iterator<RoiI> j = rois.iterator();
+while (j.hasNext()) {
+	
+  roi = j.next();
+  list = roi.getShapes() 
+  label = list[0].getText()
+ points = list[0].getPoints()
+
+ 
+label = label.toString()
+points = points.toString()
+points = points.replace("Point2D.Double", "")
+points = points.replace("], [", " ; ")
+points = points.replace("[", "")
+points = points.replace("]", "")
+points = points.replace(" ", "")
+points = points.replace(".0", "")
+points = points.split(';')
+  // Do something
   
+  println("Found " +label)
+  println("Found " +points)
+  println("Found " +roi)
+
 //Create Polygon in OrbitImageAnalysis
-//PolygonExt polygon = new PolygonExt();
-polygon = new PolygonI()
-polygon.setPoints(rstring(points))
-polygon.setTheT(rint(0))
-polygon.setTheZ(rint(0))
-polygon.setStrokeColor(rint(-65281))   // yellow
-polygon.setTextValue(rstring(ia.description))
-polygon.setClosed(true);
+PolygonExt polygon = new PolygonExt()
+for (i=0; i<points.size(); i++) {
+	point = points[i].split(',')
+	 int a = Integer.parseInt(point[0])
+	 int b = Integer.parseInt(point[1])
+polygon.addPoint(a, b)
+//println("Point: " +points[i])
 
+}
+polygon.setClosed(true)
 
-ImageAnnotation annotation = new ImageAnnotation("ROI",polygon,ImageAnnotation.SUBTYPE_ROI, Color.magenta);
+ImageAnnotation annotation = new ImageAnnotation("ROI",polygon,ImageAnnotation.SUBTYPE_NORMAL, Color.yellow)
 // you might add further shapes like SUBTYPE_EXCLUSION to exclude parts inside a ROI or SUBTYPE_INCLUSION to include a part in an exclusion
 // or just use SUBTYPE_NORMAL to add an informative annotation which does not influence the ROI at all
 
-RawAnnotation rawAnnotation = new RawAnnotation();
-rawAnnotation.setData(annotation.getData());
-rawAnnotation.setDescription(annotation.getDescription());
-rawAnnotation.setUserId(USERNAME);
-rawAnnotation.setModifyDate(new Date());
+RawAnnotation rawAnnotation = new RawAnnotation()
+rawAnnotation.setRawDataFileId(omeroImageId)//image id
+rawAnnotation.setData(annotation.getData())
+rawAnnotation.setDescription(label)
+rawAnnotation.setUserId(USERNAME)
+rawAnnotation.setModifyDate(new Date())
 
 // store in DB
 DALConfig.getImageProvider().InsertRawAnnotation(rawAnnotation);
+
+// insert further annotations...
+
 }
-//println(AnnToSave)
-println("Close...")
-}
-imageProvider.close()
-println("END")
+DALConfig.getImageProvider().close();
