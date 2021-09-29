@@ -1,6 +1,6 @@
 import com.actelion.research.orbit.imageAnalysis.models.ImageAnnotation
 import com.actelion.research.orbit.imageAnalysis.models.PolygonExt
-
+import com.actelion.research.orbit.imageAnalysis.models.ClassShape
 
 import java.awt.Color
 import java.awt.Point
@@ -34,31 +34,13 @@ import com.actelion.research.orbit.imageAnalysis.dal.DALConfig
 
 import java.io.*;
 import java.util.*;
-//import omero.gateway.util.ROIComponent
-
-//import omero.gateway.BlitzGateway
-
-//import omero.scripts as scripts
-//import omero.gateway.BlitzGateway
-//import omero.rtypes.rlong
-//, rint, rstring, robject, unwrap
 import omero.model.RectangleI
-//EllipseI, LineI, PolygonI, PolylineI, MaskI, LabelI, PointI
-//import math
-//, pi
 import omero.gateway.model.ROIResult
 
 // Edit these parameters
-String USERNAME = "root"
-String PASSWORD = "omero-root-password"
+String USERNAME = "USERNAME"
+String PASSWORD = "PASSWORD"
 
-// Use the currently opened image...
-//final OrbitImageAnalysis OIA = OrbitImageAnalysis.getInstance()
-//ImageFrame iFrame = OIA.getIFrame()
-//println("selected image: " + iFrame)
-//RawDataFile rdf = iFrame.rdf
-
-//Boucle
 
 
 
@@ -68,7 +50,6 @@ String PASSWORD = "omero-root-password"
 //}
 //else{
 // Get the OMERO Image ID
-//int omeroImageId = rdf.getRawDataFileId()
 int omeroImageId = 352
 println("ID:" + omeroImageId)
 
@@ -123,21 +104,19 @@ polygon.addPoint(a, b)
 }
 polygon.setClosed(true)
 
-ImageAnnotation annotation = new ImageAnnotation("ROI",polygon,ImageAnnotation.SUBTYPE_NORMAL, Color.yellow)
-// you might add further shapes like SUBTYPE_EXCLUSION to exclude parts inside a ROI or SUBTYPE_INCLUSION to include a part in an exclusion
-// or just use SUBTYPE_NORMAL to add an informative annotation which does not influence the ROI at all
+ClassShape cs = new ClassShape("Annotation Shape",Color.yellow,ClassShape.UNDEFINED);
+cs.getShapeList().add(polygon);
+ImageAnnotation annotation = new ImageAnnotation("Annotation",cs);
 
-RawAnnotation rawAnnotation = new RawAnnotation()
-rawAnnotation.setRawDataFileId(omeroImageId)//image id
-rawAnnotation.setData(annotation.getData())
-rawAnnotation.setDescription(label)
-rawAnnotation.setUserId(USERNAME)
-rawAnnotation.setModifyDate(new Date())
+//RawAnnotation rawAnnotation = new RawAnnotation()
+annotation.setRawDataFileId(omeroImageId)//image id
+annotation.setDescription(label)
+annotation.setUserId(USERNAME)
+annotation.setModifyDate(new Date())
 
 // store in DB
-DALConfig.getImageProvider().InsertRawAnnotation(rawAnnotation);
+imageProvider.InsertRawAnnotation(annotation);
 
-// insert further annotations...
 
 }
 DALConfig.getImageProvider().close();
